@@ -5,7 +5,7 @@
 分支推送、PR 和手动运行触发 `.github/workflows/ci.yml`：
 
 - Go 版本读取 `backend/go.mod`，执行 gofmt、模块校验、vet、race 测试及编译。Redis 服务用于现有集成测试。
-- Node.js 24 通过 npm ci 安装锁定依赖，执行管理端 Vitest，构建两个前端（包含 TypeScript 检查）。用户端目前没有测试脚本。
+- Node.js 24 通过 npm ci 安装锁定依赖，执行管理端 Vitest，构建两个前端（包含 TypeScript 检查）。管理端测试复用用户端源码，因此该任务也安装用户端依赖。用户端目前没有测试脚本。
 - 执行本地启动器的 Node 测试。
 - 构建三个 Linux Docker 镜像，不推送。
 

@@ -55,8 +55,13 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            user-frontend/package-lock.json
       - run: npm ci
+      - name: Install user frontend dependencies for shared tests
+        if: matrix.directory == 'frontend'
+        run: npm ci --prefix ../user-frontend
       - name: Run admin tests
         if: matrix.directory == 'frontend'
         run: npm test
