@@ -1,0 +1,95 @@
+# SentinelGo Linux 全栈编排（宿主机可为 Linux、Windows 或 macOS）
+#   启动：docker compose up -d --build
+#   查看：管理端 http://localhost:3000  用户端 http://localhost:3001  后端 API http://localhost:8080
+#   停止：docker compose down   （加 -v 可同时删除 mysql 数据卷）
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sentinel-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: "sentinel"
+      TZ: "Asia/Shanghai"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:3306:3306"   # 本地客户端访问
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [sentinel]
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: sentinel-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [sentinel]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinel-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # 通过 KS_ 前缀环境变量覆盖 bootstrap.yaml 中的连接地址（前缀去除后下划线转点）
+    environment:
+      KS_JWT_SECRET: "${KS_JWT_SECRET:?Set KS_JWT_SECRET in .env}"
+      KS_BOOTSTRAP_ADMIN_PASSWORD: "${KS_BOOTSTRAP_ADMIN_PASSWORD:-}"
+      KS_OAUTH_GITHUB_CLIENT_ID: "${KS_OAUTH_GITHUB_CLIENT_ID:-}"
+      KS_OAUTH_GITHUB_CLIENT_SECRET: "${KS_OAUTH_GITHUB_CLIENT_SECRET:-}"
+      KS_OAUTH_GITHUB_HTTP_PROXY: "${KS_OAUTH_GITHUB_HTTP_PROXY:-}"
+      KS_DATABASE_MASTER_DSN: "root:123456@tcp(mysql:3306)/sentinel?charset=utf8mb4&parseTime=True&loc=Local"
+      KS_REDIS_ADDR: "redis:6379"
+      KS_APP_PORT: "8080"
+      KS_OAUTH_GITHUB_FRONTEND_URL: "http://localhost:3001"
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads_data:/app/uploads
+    networks: [sentinel]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentinel-frontend
+    depends_on: [backend]
+    environment:
+      VITE_PROXY_TARGET: "http://backend:8080"
+    ports:
+      - "3000:3000"
+    networks: [sentinel]
+
+  user-frontend:
+    build:
+      context: ./user-frontend
+      dockerfile: Dockerfile
+    container_name: sentinel-user-frontend
+    depends_on: [backend]
+    environment:
+      VITE_PROXY_TARGET: "http://backend:8080"
+    ports:
+      - "3001:3001"
+    networks: [sentinel]
+
+volumes:
+  mysql_data:
+  uploads_data:
+
+networks:
+  sentinel:
+    driver: bridge

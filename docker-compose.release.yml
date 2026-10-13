@@ -1,0 +1,10 @@
+services:
+  backend:
+    image: ghcr.io/${GHCR_REPOSITORY:?Set lowercase owner/repository}/backend:${IMAGE_TAG:?Set version tag}
+    pull_policy: always
+  frontend:
+    image: ghcr.io/${GHCR_REPOSITORY:?Set lowercase owner/repository}/frontend:${IMAGE_TAG:?Set version tag}
+    pull_policy: always
+  user-frontend:
+    image: ghcr.io/${GHCR_REPOSITORY:?Set lowercase owner/repository}/user-frontend:${IMAGE_TAG:?Set version tag}
+    pull_policy: always

@@ -1,0 +1,32 @@
+.runtime/
+.env
+backend/config/backup_cache.yaml
+backend/server.log
+backend/server.err
+backend/bin/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Go coverage / test artifacts
+*.out
+backend/cov
+backend/cover
+backend/coverage
+backend/cp
+backend/hp
+backend/hfunc.txt
+
+# Runtime uploads (avatars, etc.); keep dir structure if needed via .gitkeep
+backend/uploads/
+
+# Frontend test reports and accidental shell output files
+frontend/coverage/
+frontend/coverage-report/
+frontend/fcov.txt
+user-frontend/coverage/
+user-frontend/coverage-report/
+/$null
+/NUL

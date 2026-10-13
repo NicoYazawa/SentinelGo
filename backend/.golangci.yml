@@ -1,0 +1,73 @@
+# SentinelGo 后端 Go 代码风格约束
+#
+# 依赖 golangci-lint >= v2.0：
+#   go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+#
+# 注意：首次启用 errcheck / revive 时会暴露存量问题（错误丢弃约 35 处、
+# 导出标识符缺注释约 35 处），需按代码评审报告分批清理，
+# 不要用 nolint 注释掩盖。
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    # 格式与 import 分组（零存量问题，强约束）
+    - gofmt
+    - goimports
+    # 正确性
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # 错误处理：优先收敛被静默丢弃的 error
+    - errcheck
+    # 命名与文档
+    - revive
+    - misspell
+  settings:
+    errcheck:
+      # 类型断言必须带 ok，覆盖 auth.go / role.go / user.go 中的裸断言
+      check-type-assertions: true
+      # 暂不强制报错 _ = 形式的显式忽略，待存量清理完再开启
+      check-blank: false
+    goimports:
+      local-prefixes:
+        - sentinelgo
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+        - name: package-comments
+        - name: var-naming
+        - name: indent-error-flow
+          # 禁止 panic / return 之后的 else
+        - name: superfluous-else
+        - name: unreachable-code
+        - name: errorf
+          # fmt.Errorf 无格式参数时应改用 errors.New
+    exclusions:
+      generated: lax
+      presets:
+        - comments
+        - common-false-positives
+        - legacy
+        - std-error-handling
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - sentinelgo
+  exclusions:
+    generated: lax
+    paths:
+      # wire_gen.go 由 wire 自动生成
+      - cmd/server/wire_gen\.go

@@ -1,0 +1,51 @@
+app:
+  name: sentinelgo
+  env: dev
+  port: 8080
+
+jwt:
+  secret: ""
+  expire: 7200
+
+database:
+  master_dsn: "root:123456@tcp(127.0.0.1:3306)/sentinel?charset=utf8mb4&parseTime=True&loc=Local"
+  # slave_dsns:  # 可选，配置从库用于读写分离
+  #   - "root:123456@tcp(127.0.0.1:3307)/sentinel?charset=utf8mb4&parseTime=True&loc=Local"
+  max_open_conns: 100
+  max_idle_conns: 50
+  max_lifetime: 1800
+  max_idle_time: 900
+
+redis:
+  addr: "127.0.0.1:6379"
+  password: ""
+  db: 0
+  pool_size: 100
+  min_idle_conns: 10
+
+log:
+  level: "info"
+
+system_switches:
+  enable_register: true
+  maintenance_mode: false
+
+oauth:
+  github:
+    client_id: ""
+    client_secret: ""
+    redirect_uri: "http://localhost:8080/api/v1/auth/oauth/github/callback"
+    frontend_url: "http://localhost:3001"
+    http_proxy: "" # Optional: set KS_OAUTH_GITHUB_HTTP_PROXY when a proxy is required.
+
+# 短信验证码服务配置
+# provider: dev（仅打印到日志，不真实下发）| aliyun（真实短信网关）
+# 阿里云 AK/SK 不在此落明文，由 credentials-go 默认凭据链从环境变量读取：
+#   ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET
+sms:
+  provider: dev
+  sign_name: "速通互联验证码"
+  template_code: "100001"
+  code_ttl: "300s"     # 验证码有效期
+  rate_limit: "60s"    # 同场景同手机号发送频率限制
+  max_attempts: 5      # 单码最大校验尝试次数（防爆破）

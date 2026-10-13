@@ -1,0 +1,14 @@
+.git
+.runtime
+bin
+uploads
+*.out
+cov
+cover
+coverage
+cp
+hp
+hfunc.txt
+server.err
+server.log
+**/.DS_Store
