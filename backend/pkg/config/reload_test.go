@@ -58,6 +58,9 @@ func TestConfigurationHotReloadAndRejectedUpdates(t *testing.T) {
 	if GlobalManager.Get().App.Name != "original" {
 		t.Fatal("initial config not loaded")
 	}
+	// The file provider drops identical write events within its 5ms window.
+	// Keep each independent update outside that window, including on fast Linux CI.
+	time.Sleep(10 * time.Millisecond)
 	if err := os.WriteFile(path, []byte(valid("reloaded", true)), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -75,6 +78,7 @@ func TestConfigurationHotReloadAndRejectedUpdates(t *testing.T) {
 		{"unsafe key", "jwt:\n  secret: short\n", "热加载认证配置无效，继续使用旧配置"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			time.Sleep(10 * time.Millisecond)
 			if err := os.WriteFile(path, []byte(tc.text), 0600); err != nil {
 				t.Fatal(err)
 			}

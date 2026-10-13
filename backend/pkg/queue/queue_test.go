@@ -99,8 +99,9 @@ func TestConsumerStartConsume(t *testing.T) {
 	var called atomic.Bool
 	var captured map[string]any
 	cons.StartConsume(func(payload map[string]any) error {
-		called.Store(true)
 		captured = payload
+		// Publish the payload before the completion flag synchronizes the reader.
+		called.Store(true)
 		return nil
 	})
 
