@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +41,29 @@ func awaitReload(t *testing.T, messages <-chan string, want string) {
 		}
 	}
 }
+
+// Replace the complete file so Linux watchers never read a truncated intermediate
+// state and then suppress the final write as a duplicate event.
+func replaceReloadConfig(t *testing.T, path, text string) {
+	t.Helper()
+	time.Sleep(10 * time.Millisecond) // exceed the provider's 5ms event window
+	if runtime.GOOS == "windows" {
+		// Windows reports replacement as rename events, which the provider does
+		// not reload; use its supported write notification on this platform.
+		if err := os.WriteFile(path, []byte(text), 0600); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	tmp := path + ".next"
+	if err := os.WriteFile(tmp, []byte(text), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestConfigurationHotReloadAndRejectedUpdates(t *testing.T) {
 	dir := t.TempDir()
 	oldBackup, oldConfig, oldLogger := backupCachePath, GlobalManager.Get(), slog.Default()
@@ -58,12 +82,7 @@ func TestConfigurationHotReloadAndRejectedUpdates(t *testing.T) {
 	if GlobalManager.Get().App.Name != "original" {
 		t.Fatal("initial config not loaded")
 	}
-	// The file provider drops identical write events within its 5ms window.
-	// Keep each independent update outside that window, including on fast Linux CI.
-	time.Sleep(10 * time.Millisecond)
-	if err := os.WriteFile(path, []byte(valid("reloaded", true)), 0600); err != nil {
-		t.Fatal(err)
-	}
+	replaceReloadConfig(t, path, valid("reloaded", true))
 	awaitReload(t, messages, "配置热加载完成")
 	if cfg := GlobalManager.Get(); cfg.App.Name != "reloaded" || !cfg.SystemSwitches.MaintenanceMode {
 		t.Fatalf("reload failed: %+v", cfg)
@@ -78,10 +97,7 @@ func TestConfigurationHotReloadAndRejectedUpdates(t *testing.T) {
 		{"unsafe key", "jwt:\n  secret: short\n", "热加载认证配置无效，继续使用旧配置"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			time.Sleep(10 * time.Millisecond)
-			if err := os.WriteFile(path, []byte(tc.text), 0600); err != nil {
-				t.Fatal(err)
-			}
+			replaceReloadConfig(t, path, tc.text)
 			awaitReload(t, messages, tc.log)
 			if GlobalManager.Get().App.Name != "reloaded" {
 				t.Fatal("invalid reload replaced active config")
